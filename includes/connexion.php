@@ -1,7 +1,7 @@
 <?php
 session_start();
-require_once 'User.php';
-require_once 'db-conn.php';
+require_once './User.php';
+require_once './db-conn.php';
 
 $user = new User($conn);
 $message = '';
@@ -12,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($user->connect($login, $password)) {
         $_SESSION['user_id'] = $user->getId();
         $_SESSION['login'] = $user->getLogin();
-        header("Location: index.php");
+        header("Location: ../index.php");
         exit();
     } else {
         $message = "Échec de la connexion. Veuillez réessayer.";
@@ -25,10 +25,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="./css/style.css">
     <title>Connexion</title>
 </head>
 <body>
     <h1>Connexion</h1>
+    <?php if (isset($message)): ?>
+        <div class="message <?php echo isset($success) && $success ? 'success' : 'error'; ?>">
+            <?php echo $message; ?>
+        </div>
+    <?php endif; ?>
     <?php if ($message): ?>
         <p><?php echo $message; ?></p>
     <?php endif; ?>
@@ -37,6 +43,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <input type="password" name="password" placeholder="Mot de passe" required><br>
         <input type="submit" value="Se connecter">
     </form>
-    <p><a href="index.php">Retour à l'accueil</a></p>
+    <p><a href="../index.php">Retour à l'accueil</a></p>
 </body>
 </html>

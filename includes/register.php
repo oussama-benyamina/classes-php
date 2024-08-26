@@ -1,7 +1,7 @@
 <?php
 session_start();
-include_once 'User.php';
-include_once 'db-conn.php';
+include_once './User.php';
+include_once './db-conn.php';
 
 $user = new User($conn);
 $message = '';
@@ -26,10 +26,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="./css/style.css">
     <title>Inscription</title>
 </head>
 <body>
     <h1>Inscription</h1>
+    <?php if (isset($message)): ?>
+        <div class="message <?php echo isset($success) && $success ? 'success' : 'error'; ?>">
+            <?php echo $message; ?>
+        </div>
+    <?php endif; ?>
     <?php if ($message): ?>
         <p><?php echo $message; ?></p>
     <?php endif; ?>
@@ -41,6 +47,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <input type="text" name="lastname" placeholder="Nom" required><br>
         <input type="submit" value="S'inscrire">
     </form>
-    <p><a href="index.php">Retour à l'accueil</a></p>
+    <p><a href="../index.php">Retour à l'accueil</a></p>
 </body>
 </html>

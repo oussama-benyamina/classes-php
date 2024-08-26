@@ -1,13 +1,13 @@
 <?php
 session_start();
-require_once 'User.php';
-require_once 'db-conn.php';
+require_once './User.php';
+require_once './db-conn.php';
 
 $user = new User($conn);
 $message = '';
 
 if (!isset($_SESSION['user_id'])) {
-    header("Location: index.php");
+    header("Location: ../index.php");
     exit();
 }
 
@@ -34,10 +34,16 @@ $userInfo = $user->getInfoById($_SESSION['user_id']);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="./css/style.css">
     <title>Mettre à jour le profil</title>
 </head>
 <body>
     <h1>Mettre à jour le profil</h1>
+    <?php if (isset($message)): ?>
+        <div class="message <?php echo isset($success) && $success ? 'success' : 'error'; ?>">
+            <?php echo $message; ?>
+        </div>
+    <?php endif; ?>
     <?php if ($message): ?>
         <p><?php echo $message; ?></p>
     <?php endif; ?>
@@ -49,6 +55,6 @@ $userInfo = $user->getInfoById($_SESSION['user_id']);
         <input type="text" name="lastname" placeholder="Nom" value="<?php echo htmlspecialchars($userInfo['lastname']); ?>" required><br>
         <input type="submit" value="Mettre à jour">
     </form>
-    <p><a href="index.php">Retour à l'accueil</a></p>
+    <p><a href="../index.php">Retour à l'accueil</a></p>
 </body>
 </html>
