@@ -1,73 +1,57 @@
 <?php
-// user-pdo.php
-
 class Userpdo {
     private $id;
     public $login;
     public $email;
     public $firstname;
     public $lastname;
+    private $pdo;
 
-    private $conn;
-    private $isConnected = false;
-
-    public function __construct($host, $username, $password, $dbname) {
-        try {
-            $dsn = "mysql:host=$host;dbname=$dbname;charset=utf8";
-            $this->conn = new PDO($dsn, $username, $password);
-            $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        } catch (PDOException $e) {
-            die("Connection failed: " . $e->getMessage());
-        }
+    public function __construct($pdo) {
+        $this->pdo = $pdo;
     }
 
     public function register($login, $password, $email, $firstname, $lastname) {
-        try {
-            $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
-            $stmt = $this->conn->prepare("INSERT INTO utilisateurs (login, password, email, firstname, lastname) VALUES (:login, :password, :email, :firstname, :lastname)");
-            $stmt->bindParam(':login', $login);
-            $stmt->bindParam(':password', $hashedPassword);
-            $stmt->bindParam(':email', $email);
-            $stmt->bindParam(':firstname', $firstname);
-            $stmt->bindParam(':lastname', $lastname);
-            $stmt->execute();
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+        $query = "INSERT INTO utilisateurs (login, password, email, firstname, lastname) VALUES (:login, :password, :email, :firstname, :lastname)";
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute([
+            ':login' => $login,
+            ':password' => $hashedPassword,
+            ':email' => $email,
+            ':firstname' => $firstname,
+            ':lastname' => $lastname
+        ]);
 
-            $this->id = $this->conn->lastInsertId();
+        if ($stmt->rowCount() > 0) {
+            $this->id = $this->pdo->lastInsertId();
             $this->login = $login;
             $this->email = $email;
             $this->firstname = $firstname;
             $this->lastname = $lastname;
-
             return $this->getAllInfos();
-        } catch (PDOException $e) {
-            return false;
         }
+        return false;
     }
 
     public function connect($login, $password) {
-        try {
-            $stmt = $this->conn->prepare("SELECT * FROM utilisateurs WHERE login = :login");
-            $stmt->bindParam(':login', $login);
-            $stmt->execute();
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        $query = "SELECT * FROM utilisateurs WHERE login = :login";
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute([':login' => $login]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if ($user && password_verify($password, $user['password'])) {
-                $this->id = $user['id'];
-                $this->login = $user['login'];
-                $this->email = $user['email'];
-                $this->firstname = $user['firstname'];
-                $this->lastname = $user['lastname'];
-                $this->isConnected = true;
-                return true;
-            }
-            return false;
-        } catch (PDOException $e) {
-            return false;
+        if ($user && password_verify($password, $user['password'])) {
+            $this->id = $user['id'];
+            $this->login = $user['login'];
+            $this->email = $user['email'];
+            $this->firstname = $user['firstname'];
+            $this->lastname = $user['lastname'];
+            return true;
         }
+        return false;
     }
 
     public function disconnect() {
-        $this->isConnected = false;
         $this->id = null;
         $this->login = null;
         $this->email = null;
@@ -77,14 +61,12 @@ class Userpdo {
 
     public function delete() {
         if ($this->id) {
-            try {
-                $stmt = $this->conn->prepare("DELETE FROM utilisateurs WHERE id = :id");
-                $stmt->bindParam(':id', $this->id, PDO::PARAM_INT);
-                $result = $stmt->execute();
+            $query = "DELETE FROM utilisateurs WHERE id = :id";
+            $stmt = $this->pdo->prepare($query);
+            $result = $stmt->execute([':id' => $this->id]);
+            if ($result) {
                 $this->disconnect();
-                return $result;
-            } catch (PDOException $e) {
-                return false;
+                return true;
             }
         }
         return false;
@@ -92,32 +74,37 @@ class Userpdo {
 
     public function update($login, $password, $email, $firstname, $lastname) {
         if ($this->id) {
-            try {
-                $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
-                $stmt = $this->conn->prepare("UPDATE utilisateurs SET login = :login, password = :password, email = :email, firstname = :firstname, lastname = :lastname WHERE id = :id");
-                $stmt->bindParam(':login', $login);
-                $stmt->bindParam(':password', $hashedPassword);
-                $stmt->bindParam(':email', $email);
-                $stmt->bindParam(':firstname', $firstname);
-                $stmt->bindParam(':lastname', $lastname);
-                $stmt->bindParam(':id', $this->id, PDO::PARAM_INT);
-                $stmt->execute();
+            $query = "UPDATE utilisateurs SET login = :login, email = :email, firstname = :firstname, lastname = :lastname";
+            $params = [
+                ':login' => $login,
+                ':email' => $email,
+                ':firstname' => $firstname,
+                ':lastname' => $lastname,
+                ':id' => $this->id
+            ];
 
+            if (!empty($password)) {
+                $query .= ", password = :password";
+                $params[':password'] = password_hash($password, PASSWORD_DEFAULT);
+            }
+
+            $query .= " WHERE id = :id";
+            $stmt = $this->pdo->prepare($query);
+            $result = $stmt->execute($params);
+
+            if ($result) {
                 $this->login = $login;
                 $this->email = $email;
                 $this->firstname = $firstname;
                 $this->lastname = $lastname;
-
                 return true;
-            } catch (PDOException $e) {
-                return false;
             }
         }
         return false;
     }
 
     public function isConnected() {
-        return $this->isConnected;
+        return $this->id !== null;
     }
 
     public function getAllInfos() {
@@ -130,7 +117,7 @@ class Userpdo {
                 'lastname' => $this->lastname
             ];
         }
-        return null;
+        return false;
     }
 
     public function getLogin() {
@@ -147,10 +134,6 @@ class Userpdo {
 
     public function getLastname() {
         return $this->lastname;
-    }
-
-    public function __destruct() {
-        $this->conn = null;
     }
 }
 ?>
